@@ -1,39 +1,26 @@
-
-from scipy import misc
-from sklearn.decomposition import IncrementalPCA
+import copy
 import json
 import os
-from pprint import pprint
-from sklearn.preprocessing import LabelEncoder
-from sklearn import ensemble
 import numpy as np
-from sklearn.preprocessing import OneHotEncoder
-from PIL import Image
-import copy
-import matplotlib.pyplot as plt
 import itertools
-import numpy as np
 import matplotlib.pyplot as plt
-from sklearn import svm, datasets
+from scipy import misc
+from sklearn.decomposition import IncrementalPCA
+from pprint import pprint
+from PIL import Image
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn import svm, datasets, ensemble
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
-from sklearn.cross_validation import train_test_split
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_curve
 
-#######################################################################################################################################
-#	WORKS ONLY FOR A DATA SET OF SIZE 100
+#######################################
+#WORKS ONLY FOR A DATA SET OF SIZE 100#
+#######################################
 
-#######################################################################################################################################
-
-#code to plot confusion matrix
-def plot_confusion_matrix(cm, classes,
-                          normalize=False,
-                          title='Confusion matrix',
-                          cmap=plt.cm.Blues):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
+#This function prints and plots the confusion matrix.
+#Normalization can be applied by setting 'normalize= True'.
+def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         print("Normalized confusion matrix")
@@ -60,29 +47,39 @@ def plot_confusion_matrix(cm, classes,
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
 
-#end of plot confusion matrix
-#######################################################################################################################################
+#####################################################################################################
 
+#This function plots the ROC curve graph
+def plot_roc_curve(cm, classes, title='ROC Curve', cmap=plt.cm.Blues):
+	lw = 2
+	plt.plot(cm[0], color='darkorange', lw=lw,)
+	plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+	plt.xlim([0.0, 1.0])
+	plt.ylim([0.0, 1.05])
+	plt.xlabel('False Positive Rate')
+	plt.ylabel('True Positive Rate')
+	plt.title('Receiver operating characteristic example')
 
-#######################################################################################################################################
-#create target array with data from files
+#####################################################################################################
+
+#Input and preprocess data
+#Create target array with data from files
 target_array = []
 for filename in os.listdir(): #extract whether benign or malignant from files
 	if filename.endswith("json"): #for every json (has text) file in our data set
 		data = json.load(open(filename)) #load
-		target_array.append(data["meta"]["clinical"]["benign_malignant"]) #extract whether it is benign or malignant from file
+		target_array.append(data["meta"]["clinical"]["benign_malignant"]) #extract whether it's benign or malignant
 
-target_array = np.asarray(target_array)#make numpy array
+#make numpy array
+target_array = np.asarray(target_array)
 
 #transform benign to 0 and malignant to 1
 labelencoder = LabelEncoder()
 target_array = labelencoder.fit_transform(target_array) 
 
-#######################################################################################################################################
+#####################################################################################################
 
-
-#######################################################################################################################################
-#create data array with data from pictures only
+#Create data array with data from pictures only
 data_array = []
 for filename in os.listdir(): #transform images into matrix of numbers and store in data array
 	if filename.endswith("jpg"): #for all jpg (images) in our file
@@ -97,17 +94,14 @@ for filename in os.listdir(): #transform images into matrix of numbers and store
 		img.save(filename) 
 
 data_array = np.asarray(data_array) #make data array numpy array
-#######################################################################################################################################
 
+#####################################################################################################
 
-#######################################################################################################################################
+#Split data into testing and training sets
+x_train, x_test, y_train, y_test = train_test_split(data_array, target_array, test_size = 0.3, random_state = 0) #split composite data into test and train sets
 
-
-
-
-x_train, x_test, y_train, y_test = train_test_split(data_array, target_array, test_size = 0.36, random_state = 0) #split composite data into test and train sets
-
-nsamples, nx, ny = x_train.shape #get length of dimensions in order to be able to properly reshape
+#Get length of dimensions in order to be able to properly reshape
+nsamples, nx, ny = x_train.shape 
 msamples, mx, my = x_test.shape
 
 '''
@@ -132,62 +126,32 @@ print(my)
 x_train = x_train.reshape(nsamples,nx*ny) #reshape training (data) array with dimensions obtained above for Classifier
 x_test = x_test.reshape(msamples, mx*my) #reshape test (data) array with dimensions obtained above for Classifier
 
+#Create Random Forest Classifier and fit training data to it
 clf = ensemble.RandomForestClassifier(n_estimators = 100, random_state=0) #estimators = # of nodes, set random_state prevents it from changing inbetween runs
 tree = clf.fit(x_train, y_train) #create tree from training data
 
+#####################################################################################################
 
-
-#######################################################################################################################################
-
-
-#######################################################################################################################################
-#test tree and create measures of fit
+#Test tree and create measures of fit
 y_prediction = clf.predict(x_test) #test how well built tree predicts unseen images
 #print(y_prediction) #returns an array of 0 or 1 for benign or malignant
 
 class_names = "benign", "malignant" #needed to plot confusion matrix
 cnf_matrix = confusion_matrix(y_test, y_prediction) #create confusion matrix from test data
+roc_data = roc_curve(y_test, y_prediction) #create roc curve from test data
 np.set_printoptions(precision=2)
 
-# Plot non-normalized confusion matrix
+
+#Plot non-normalized confusion matrix
 plt.figure()
 plot_confusion_matrix(cnf_matrix, classes=class_names, title='Confusion matrix, without normalization')
 
-# Plot normalized confusion matrix
+#Plot normalized confusion matrix
 plt.figure()
 plot_confusion_matrix(cnf_matrix, classes=class_names, normalize=True, title='Normalized confusion matrix')
 
+#Plot ROC curve
+#plt.figure()
+#plot_roc_curve(roc_data, classes=class_names, title='ROC Curve')
+
 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

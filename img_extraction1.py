@@ -14,10 +14,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import confusion_matrix, roc_curve
 
-#######################################
-#WORKS ONLY FOR A DATA SET OF SIZE 100#
-#######################################
-
 #This function prints and plots the confusion matrix.
 #Normalization can be applied by setting 'normalize= True'.
 def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
@@ -86,22 +82,33 @@ for filename in os.listdir(): #transform images into matrix of numbers and store
 		data_array.append(misc.imread(filename, mode = 'F')) #open and read by pixel, putting information into 3d array: 1d - all pictures, 2d - individual picture, 3d - individual pixel
 
 		#crop each image and resave so that all 2d - arrays are the same size
-		basewidth = 300 
+		basewidth = 100
 		img = Image.open(filename)
 		wpercent = (basewidth/float(img.size[0]))
-		hsize = int((float(img.size[1])*float(wpercent)))
+		hsize = 100#(int((float(img.size[1])*float(wpercent))*.5))
 		img = img.resize((basewidth,hsize), Image.ANTIALIAS)
-		img.save(filename) 
+		img.save(filename)
 
 data_array = np.asarray(data_array) #make data array numpy array
 
 #####################################################################################################
 
 #Split data into testing and training sets
-x_train, x_test, y_train, y_test = train_test_split(data_array, target_array, test_size = 0.3, random_state = 0) #split composite data into test and train sets
 
+x_train, x_test, y_train, y_test = train_test_split(data_array, target_array, test_size = 0.3, random_state = 0) #split composite data into test and train sets
+x_train_folds = np.array_split(x_train, 200)
+y_train_folds = np.array_split(y_train, 200)
 #Get length of dimensions in order to be able to properly reshape
-nsamples, nx, ny = x_train.shape 
+print(x_train.shape)
+
+clf = ensemble.RandomForestClassifier(n_estimators = 200, random_state=0) #estimators = # of trees, set random_state prevents it from changing in between runs
+n = 0
+for array in x_train_folds:	
+	nsamples, nx, ny = array.shape
+	x_train2 = array.reshape(nsamples,nx*ny) #reshape training (data) array with dimensions obtained above for Classifier
+	tree = clf.fit(x_train2, y_train_folds[n]) #fit tree from training data
+	n +=1
+
 msamples, mx, my = x_test.shape
 
 '''
@@ -123,12 +130,11 @@ print("my:")
 print(my)
 '''
 
-x_train = x_train.reshape(nsamples,nx*ny) #reshape training (data) array with dimensions obtained above for Classifier
+
 x_test = x_test.reshape(msamples, mx*my) #reshape test (data) array with dimensions obtained above for Classifier
 
 #Create Random Forest Classifier and fit training data to it
-clf = ensemble.RandomForestClassifier(n_estimators = 100, random_state=0) #estimators = # of nodes, set random_state prevents it from changing inbetween runs
-tree = clf.fit(x_train, y_train) #create tree from training data
+
 
 #####################################################################################################
 

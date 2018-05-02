@@ -13,6 +13,7 @@ from sklearn import svm, datasets, ensemble
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, roc_curve, accuracy_score
 from imblearn.over_sampling import RandomOverSampler
+from xgboost.sklearn import XGBClassifier
 
 #This function prints and plots the confusion matrix.
 #Normalization can be applied by setting 'normalize= True'.
@@ -137,15 +138,22 @@ x_train_folds = np.array_split(x_train, 1)
 y_train_folds = np.array_split(y_train, 1)
 
 #Initialize random forest
-clf = ensemble.RandomForestClassifier(n_estimators = 10, warm_start = True, random_state=0) #estimators = # of trees, set random_state prevents it from changing in between runs
-n = 0
+params = {
+	'objective': 'binary:logistic',
+	'max_depth': 100,
+	'learning_rate': 1.0,
+	'silent': 1.0,
+	'n_estimators': 200
+}
 
+bst = XGBClassifier(**params)
+n = 0
 #Iteratively train the classifier with each fold
 for array in x_train_folds:	
 	#nsamples, nx, ny = array.shape
 	#x_train2 = array.reshape(nsamples, nx*ny) #reshape training (data) array with dimensions obtained above for Classifier
-	clf.fit(array, y_train_folds[n]) #fit tree from training data
-	clf.n_estimators += 10
+	bst.fit(array, y_train_folds[n]) #fit tree from training data
+	bst.n_estimators += 10
 	n +=1
 
 #Fit tree with age and sex CURRENTLY NOT WORKING
@@ -154,13 +162,13 @@ for array in x_train_folds:
 #####################################################################################################
 
 #Test tree and create measures of fit
-y_prediction = clf.predict(x_test) #test how well built tree predicts unseen images
+y_prediction = bst.predict(x_test) #test how well built tree predicts unseen images
 
 print("Accuracy: ", accuracy_score(y_test, y_prediction)) #get accuracy score
 
 class_names = "benign", "malignant" #needed to plot confusion matrix
 cnf_matrix = confusion_matrix(y_test, y_prediction) #create confusion matrix from test data
-roc_data = roc_curve(y_test, y_prediction) #create roc curve from test data
+#roc_data = roc_curve(y_test, y_prediction) #create roc curve from test data
 np.set_printoptions(precision=2)
 
 
